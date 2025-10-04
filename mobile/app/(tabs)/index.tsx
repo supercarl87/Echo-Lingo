@@ -634,11 +634,17 @@ export default function TranslateScreen() {
       }
       setProcessingError(null);
 
-  // Subtle haptic pulse to confirm playback initiated
-  void Haptics.selectionAsync();
+      // Subtle haptic pulse to confirm playback initiated
+      void Haptics.selectionAsync();
 
-  // Download audio file to local storage before playing
-  const localUri = await downloadAudioFile(audioUrl, isOriginal);
+      // Verify the audio URL is still accessible before downloading
+      const isAudioAccessible = await verifyAudioUrl(audioUrl);
+      if (!isAudioAccessible) {
+        throw new Error(`Audio file is not accessible: ${audioUrl}`);
+      }
+
+      // Download audio file to local storage before playing
+      const localUri = await downloadAudioFile(audioUrl, isOriginal);
 
       console.log(
         `Playing ${
