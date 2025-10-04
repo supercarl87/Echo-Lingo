@@ -21,6 +21,7 @@ dependencies = [
     "pydub>=0.25.1",
     "pyaudio>=0.2.14",
     "hume>=0.11.7",
+    "vapi-server-sdk>=1.7.2",
 ]
 
 [tool.ruff]

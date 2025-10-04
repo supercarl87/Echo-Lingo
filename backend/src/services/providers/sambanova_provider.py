@@ -42,7 +42,7 @@ class SambaNovaTranslationProvider(BaseTranslationProvider):
 
         # Create system prompt for translation
         system_prompt = f"""You are a translation assistant.
-        Translate the following text into {target_language}.
+        Translate the following text into {target_language}. make it sounds like crazy , but carry the same meeting
         Provide only the translated text without any explanations or additional content."""
 
         try:

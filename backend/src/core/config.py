@@ -54,7 +54,10 @@ class Settings(BaseSettings):
     HUME_VOICE_ID: str = Field(
         default="30edfa2e-7d75-45fb-8ccf-e280941393ee", description="Hume voice ID for TTS"
     )
-
+    VAPI_API_KEY: str = Field(default="", description="Vapi API key for text-to-speech services")
+    VAPI_VOICE_ID: str = Field(
+        default="30edfa2e-7d75-45fb-8ccf-e280941393ee", description="Hume voice ID for TTS"
+    )
     # Translation provider settings
     TRANSLATION_PROVIDER: str = Field(
         default="openai", description="Translation service provider (openai or sambanova)"
@@ -72,8 +75,8 @@ class Settings(BaseSettings):
     )
 
     # Default voice and model settings
-    DEFAULT_VOICE_ID: str = "o47F6fLSHEFdPzySrC5z"
-    DEFAULT_TTS_MODEL: str = "eleven_multilingual_v2"
+    DEFAULT_VOICE_ID: str = "bBtMA32TWQAW4nrcanyO"
+    DEFAULT_TTS_MODEL: str = "eleven_v3"
     DEFAULT_TRANSLATION_MODEL: str = "gpt-4o-mini"
 
     model_config = SettingsConfigDict(
