@@ -13,10 +13,7 @@ import {
   Alert,
   TextInput,
   ActivityIndicator,
-<<<<<<< HEAD
   Animated,
-=======
->>>>>>> main
 } from 'react-native';
 import { Audio } from 'expo-av'; // Audio recording and playback library
 import { LinearGradient } from 'expo-linear-gradient';
