@@ -11,7 +11,6 @@ import {
   Pressable,
   Platform,
   Alert,
-  TextInput,
   ActivityIndicator,
   Animated,
 } from 'react-native';
@@ -747,7 +746,7 @@ export default function TranslateScreen() {
 
   // Navigate to profile screen to change language
   const navigateToProfile = () => {
-    router.push('/profile');
+    router.push({ pathname: '/(tabs)/profile' });
   };
 
   // Render the UI

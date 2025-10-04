@@ -56,7 +56,7 @@ export default function HistoryScreen() {
   }, []);
 
   // Prepare audio session for playback
-  const prepareAudioSession = async () => {
+  const prepareAudioSession = useCallback(async () => {
     if (isAudioSessionPrepared) return;
 
     try {
@@ -70,10 +70,10 @@ export default function HistoryScreen() {
     } catch (error) {
       console.error('Error preparing audio session:', error);
     }
-  };
+  }, [isAudioSessionPrepared]);
 
   // Load history from AsyncStorage
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
     try {
       const savedHistory = await AsyncStorage.getItem(HISTORY_STORAGE_KEY);
       if (savedHistory) {
@@ -83,10 +83,10 @@ export default function HistoryScreen() {
       console.error('Error loading history:', error);
       Alert.alert('Error', 'Failed to load translation history.');
     }
-  };
+  }, []);
 
   // Clean up sound resources
-  const cleanupSound = async () => {
+  const cleanupSound = useCallback(async () => {
     try {
       if (sound) {
         await sound.stopAsync();
@@ -98,7 +98,7 @@ export default function HistoryScreen() {
     } catch (error) {
       console.error('Error cleaning up sound:', error);
     }
-  };
+  }, [sound]);
 
   // Clear all history
   const clearHistory = async () => {
