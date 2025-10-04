@@ -13,8 +13,10 @@ import {
   Alert,
   TextInput,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { Audio } from 'expo-av'; // Audio recording and playback library
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics'; // Haptics for tactile feedback
 import { Ionicons } from '@expo/vector-icons'; // Icons for UI elements
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Local storage
@@ -62,6 +64,9 @@ export default function TranslateScreen() {
   const [isPlayingOriginal, setIsPlayingOriginal] = useState(false);
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [guideline, setGuideline] = useState<string>(''); // Loaded from AsyncStorage
+  const pulseScale = useRef(new Animated.Value(1)).current;
+  const pulseOpacity = useRef(new Animated.Value(0)).current;
+  const pulseAnimation = useRef<Animated.CompositeAnimation | null>(null);
 
   // Ensure audio directory exists when component mounts
   useEffect(() => {
@@ -86,6 +91,52 @@ export default function TranslateScreen() {
       };
     }, [])
   );
+
+  // Animate a subtle pulse around the record button while recording
+  useEffect(() => {
+    if (isRecording) {
+      pulseOpacity.setValue(0.5);
+      pulseAnimation.current?.stop();
+      pulseAnimation.current = Animated.loop(
+        Animated.sequence([
+          Animated.parallel([
+            Animated.timing(pulseScale, {
+              toValue: 1.35,
+              duration: 700,
+              useNativeDriver: true,
+            }),
+            Animated.timing(pulseOpacity, {
+              toValue: 0,
+              duration: 700,
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.parallel([
+            Animated.timing(pulseScale, {
+              toValue: 1,
+              duration: 700,
+              useNativeDriver: true,
+            }),
+            Animated.timing(pulseOpacity, {
+              toValue: 0.5,
+              duration: 700,
+              useNativeDriver: true,
+            }),
+          ]),
+        ])
+      );
+      pulseAnimation.current.start();
+    } else {
+      pulseAnimation.current?.stop();
+      pulseAnimation.current = null;
+      pulseScale.setValue(1);
+      pulseOpacity.setValue(0);
+    }
+
+    return () => {
+      pulseAnimation.current?.stop();
+    };
+  }, [isRecording, pulseOpacity, pulseScale]);
 
   // Ensure the audio directory exists
   const ensureAudioDirectoryExists = async () => {
@@ -583,8 +634,11 @@ export default function TranslateScreen() {
       }
       setProcessingError(null);
 
-      // Download audio file to local storage before playing
-      const localUri = await downloadAudioFile(audioUrl, isOriginal);
+  // Subtle haptic pulse to confirm playback initiated
+  void Haptics.selectionAsync();
+
+  // Download audio file to local storage before playing
+  const localUri = await downloadAudioFile(audioUrl, isOriginal);
 
       console.log(
         `Playing ${
@@ -661,10 +715,22 @@ export default function TranslateScreen() {
 
   // Render the UI
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={['#101015', '#0c0c12', '#070709']}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.container}
+    >
       <View style={styles.contentContainer}>
         {/* Language display (not selector) */}
-        <Pressable style={styles.languageDisplay} onPress={navigateToProfile}>
+        <Pressable
+          onPress={navigateToProfile}
+          style={({ pressed }) => [
+            styles.languageDisplay,
+            styles.cardShadow,
+            pressed && styles.languageDisplayPressed,
+          ]}
+        >
           <Text style={styles.languageFlag}>{selectedLanguage.flag}</Text>
           <View style={styles.languageInfo}>
             <Text style={styles.languageName}>
@@ -678,21 +744,23 @@ export default function TranslateScreen() {
 
         {/* Error display or translation results */}
         {processingError ? (
-          <View style={styles.errorContainer}>
+          <View style={[styles.errorContainer, styles.cardShadow]}>
             <Ionicons name="alert-circle" size={24} color="#ff4444" />
             <Text style={styles.errorText}>{processingError}</Text>
           </View>
         ) : transcribedText ? (
           <>
             {/* Original text display with play button */}
-            <View style={styles.textContainer}>
+            <View style={[styles.textContainer, styles.cardShadow]}>
               <View style={styles.textHeader}>
                 <Text style={styles.label}>Original Text:</Text>
                 {originalAudio && (
                   <Pressable
-                    style={[
+                    style={({ pressed }) => [
                       styles.smallPlayButton,
+                      styles.controlShadow,
                       isPlayingOriginal && styles.playButtonDisabled,
+                      pressed && !isPlayingOriginal && styles.smallPlayButtonPressed,
                     ]}
                     onPress={playOriginalAudio}
                     disabled={isPlayingOriginal}
@@ -709,14 +777,16 @@ export default function TranslateScreen() {
             </View>
 
             {/* Translated text display with play button */}
-            <View style={styles.textContainer}>
+            <View style={[styles.textContainer, styles.cardShadow]}>
               <View style={styles.textHeader}>
                 <Text style={styles.label}>Translated Text:</Text>
                 {translatedAudio && (
                   <Pressable
-                    style={[
+                    style={({ pressed }) => [
                       styles.smallPlayButton,
+                      styles.controlShadow,
                       isPlayingAudio && styles.playButtonDisabled,
+                      pressed && !isPlayingAudio && styles.smallPlayButtonPressed,
                     ]}
                     onPress={playTranslatedAudio}
                     disabled={isPlayingAudio}
@@ -743,17 +813,42 @@ export default function TranslateScreen() {
       {/* Control buttons */}
       <View style={styles.controls}>
         {/* Record button - press and hold to record */}
-        <Pressable
-          style={[styles.recordButton, isRecording && styles.recording]}
-          onPressIn={startRecording}
-          onPressOut={stopRecording}
-        >
-          <Ionicons
-            name={isRecording ? 'radio-button-on' : 'mic'}
-            size={32}
-            color="#fff"
+        <View style={styles.recordButtonWrapper}>
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              styles.recordPulse,
+              {
+                opacity: pulseOpacity,
+                transform: [{ scale: pulseScale }],
+              },
+            ]}
           />
-        </Pressable>
+          <Pressable
+            style={({ pressed }) => [
+              styles.recordButtonPressable,
+              styles.controlShadow,
+              pressed && styles.recordButtonPressed,
+            ]}
+            onPressIn={startRecording}
+            onPressOut={stopRecording}
+          >
+            <LinearGradient
+              colors={isRecording ? ['#ff5658', '#ff1f46'] : ['#ff6f61', '#ff2d55']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.recordButton, isRecording && styles.recording]}
+            >
+              <View style={styles.recordButtonInner}>
+                <Ionicons
+                  name={isRecording ? 'radio-button-on' : 'mic'}
+                  size={32}
+                  color="#fff"
+                />
+              </View>
+            </LinearGradient>
+          </Pressable>
+        </View>
       </View>
 
       {/* Loading overlay */}
@@ -761,11 +856,11 @@ export default function TranslateScreen() {
         <View style={styles.loadingContainer}>
           <View style={styles.loadingContent}>
             <ActivityIndicator size="small" color="#fff" />
-            <Text style={[styles.loadingText, { marginLeft: 10 }]}>Processing audio...</Text>
+            <Text style={styles.loadingText}>Processing audio...</Text>
           </View>
         </View>
       )}
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -773,62 +868,89 @@ export default function TranslateScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#121212', // Dark background for the app
+    backgroundColor: '#0b0b0f',
   },
   contentContainer: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 24,
+    paddingTop: 28,
+    paddingBottom: 40,
+    gap: 20,
+  },
+  cardShadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.35,
+    shadowRadius: 24,
+    elevation: 10,
   },
   languageDisplay: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 20,
+    backgroundColor: 'rgba(24, 24, 32, 0.92)',
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.07)',
+    marginBottom: 12,
+  },
+  languageDisplayPressed: {
+    transform: [{ scale: 0.98 }],
+    backgroundColor: 'rgba(30, 30, 38, 0.95)',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   languageFlag: {
-    fontSize: 24,
-    marginRight: 15,
+    fontSize: 26,
+    marginRight: 16,
   },
   languageInfo: {
     flex: 1,
   },
   languageName: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 17,
     marginBottom: 4,
+    fontWeight: '600',
   },
   languageCode: {
-    color: '#888',
+    color: 'rgba(255, 255, 255, 0.6)',
     fontSize: 12,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
   },
   changeLanguageText: {
-    color: '#4CAF50',
+    color: '#5fd58f',
     fontSize: 12,
+    fontWeight: '600',
   },
   textContainer: {
-    backgroundColor: '#1a1a1a',
-    padding: 15,
-    borderRadius: 10,
+    backgroundColor: 'rgba(18, 18, 26, 0.92)',
+    padding: 18,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
     marginBottom: 20,
   },
   textHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 5,
+    marginBottom: 8,
   },
   label: {
-    color: '#888',
+    color: 'rgba(255, 255, 255, 0.65)',
     fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
   text: {
     color: '#fff',
     fontSize: 16,
+    lineHeight: 22,
   },
   instructions: {
-    color: '#888',
+    color: 'rgba(255, 255, 255, 0.6)',
     fontSize: 16,
     textAlign: 'center',
     marginTop: 20,
@@ -838,19 +960,66 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingBottom: 40,
-    gap: 20,
+    marginTop: -4,
+  },
+  recordButtonWrapper: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 12,
+  },
+  recordPulse: {
+    position: 'absolute',
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: 'rgba(255, 80, 100, 0.22)',
+  },
+  controlShadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.35,
+    shadowRadius: 20,
+    elevation: 12,
+  },
+  recordButtonPressable: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  recordButtonPressed: {
+    transform: [{ scale: 0.97 }],
   },
   recordButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: '#ff4444',
+    width: '100%',
+    height: '100%',
+    borderRadius: 48,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  recordButtonInner: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 45,
+    backgroundColor: 'rgba(12, 12, 18, 0.75)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   recording: {
-    backgroundColor: '#ff0000',
-    transform: [{ scale: 1.1 }], // Enlarge button when recording
+    transform: [{ scale: 1.05 }],
+    borderColor: 'rgba(255, 255, 255, 0.32)',
+    shadowColor: '#ff3b5c',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.45,
+    shadowRadius: 28,
+    elevation: 14,
   },
   playButton: {
     width: 50,
@@ -861,27 +1030,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   smallPlayButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#4CAF50',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  smallPlayButtonPressed: {
+    transform: [{ scale: 0.92 }],
+    backgroundColor: '#3fa74a',
   },
   playButtonDisabled: {
     backgroundColor: '#2a5a2c',
   },
   errorContainer: {
-    backgroundColor: '#1a1a1a',
-    padding: 15,
-    borderRadius: 10,
+    backgroundColor: 'rgba(24, 24, 32, 0.92)',
+    padding: 16,
+    borderRadius: 16,
     marginBottom: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
   },
   errorText: {
-    color: '#ff4444',
+    color: '#ff6f6f',
     fontSize: 14,
     flex: 1,
   },
@@ -894,9 +1071,17 @@ const styles = StyleSheet.create({
   loadingContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
   },
   loadingText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '600',
   },
 });
