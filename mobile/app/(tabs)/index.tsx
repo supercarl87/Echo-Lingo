@@ -13,7 +13,10 @@ import {
   Alert,
   TextInput,
   ActivityIndicator,
+<<<<<<< HEAD
   Animated,
+=======
+>>>>>>> main
 } from 'react-native';
 import { Audio } from 'expo-av'; // Audio recording and playback library
 import { LinearGradient } from 'expo-linear-gradient';
@@ -347,6 +350,27 @@ export default function TranslateScreen() {
   };
 
   /**
+   * Check audio duration
+   * @param uri The URI of the audio file
+   * @returns Duration in milliseconds
+   */
+  const getAudioDuration = async (uri: string): Promise<number> => {
+    try {
+      const { sound } = await Audio.Sound.createAsync({ uri });
+      const status = await sound.getStatusAsync();
+      await sound.unloadAsync();
+
+      if (status.isLoaded) {
+        return status.durationMillis || 0;
+      }
+      return 0;
+    } catch (error) {
+      console.error('Error getting audio duration:', error);
+      return 0;
+    }
+  };
+
+  /**
    * Stop recording and process the recorded audio
    */
   const stopRecording = async () => {
@@ -377,6 +401,17 @@ export default function TranslateScreen() {
       // Process the recorded audio if we have a valid URI
       if (uri) {
         try {
+          // Check audio duration before processing
+          const duration = await getAudioDuration(uri);
+          const durationSeconds = duration / 1000;
+
+          console.log(`Audio duration: ${durationSeconds.toFixed(2)} seconds`);
+
+          if (durationSeconds < 1.5) {
+            setProcessingError('Recording too short. Please record at least 1.5 seconds of audio.');
+            return;
+          }
+
           // Copy the recording to a permanent location
           const permanentUri = await copyFileToAudioDirectory(uri);
           setOriginalAudio(permanentUri);
@@ -819,6 +854,7 @@ export default function TranslateScreen() {
       {/* Control buttons */}
       <View style={styles.controls}>
         {/* Record button - press and hold to record */}
+<<<<<<< HEAD
         <View style={styles.recordButtonWrapper}>
           <Animated.View
             pointerEvents="none"
@@ -867,6 +903,33 @@ export default function TranslateScreen() {
         </View>
       )}
     </LinearGradient>
+=======
+        <Pressable
+          style={[
+            styles.recordButton,
+            isRecording && styles.recording,
+            isLoading && styles.recordButtonDisabled,
+          ]}
+          onPressIn={startRecording}
+          onPressOut={stopRecording}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator size="large" color="#fff" />
+          ) : (
+            <Ionicons
+              name={isRecording ? 'radio-button-on' : 'mic'}
+              size={32}
+              color="#fff"
+            />
+          )}
+        </Pressable>
+        {isLoading && (
+          <Text style={styles.processingText}>Processing...</Text>
+        )}
+      </View>
+    </View>
+>>>>>>> main
   );
 }
 
@@ -1026,6 +1089,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.45,
     shadowRadius: 28,
     elevation: 14,
+  },
+  recordButtonDisabled: {
+    backgroundColor: '#666',
+    opacity: 0.7,
+  },
+  processingText: {
+    color: '#fff',
+    fontSize: 14,
+    marginTop: 10,
   },
   playButton: {
     width: 50,
