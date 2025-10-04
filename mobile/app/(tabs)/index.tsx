@@ -501,6 +501,56 @@ export default function TranslateScreen() {
   };
 
   /**
+   * Download audio file to local storage
+   * @param audioUrl The URL of the audio to download
+   * @param isOriginal Whether this is the original audio (for filename)
+   * @returns The local file URI
+   */
+  const downloadAudioFile = async (audioUrl: string, isOriginal: boolean): Promise<string> => {
+    try {
+      // If it's already a local file, return it as-is
+      if (audioUrl.startsWith('file://')) {
+        return audioUrl;
+      }
+
+      await ensureAudioDirectoryExists();
+
+      // Extract file extension from URL
+      let fileExtension = 'm4a'; // Default extension
+      const urlPath = audioUrl.split('?')[0]; // Remove query parameters
+      const urlExtension = urlPath.split('.').pop()?.toLowerCase();
+
+      // Use the extension from URL if it's a valid audio format
+      if (urlExtension && ['mp3', 'm4a', 'wav', 'aac', 'ogg'].includes(urlExtension)) {
+        fileExtension = urlExtension;
+      }
+
+      const fileName = `${isOriginal ? 'original' : 'translated'}-${Date.now()}.${fileExtension}`;
+      const destinationUri = `${AUDIO_DIRECTORY}${fileName}`;
+
+      console.log(`Downloading audio from ${audioUrl} to ${destinationUri}`);
+
+      const downloadResult = await FileSystem.downloadAsync(audioUrl, destinationUri);
+
+      if (downloadResult.status !== 200) {
+        throw new Error(`Failed to download audio: ${downloadResult.status}`);
+      }
+
+      // Verify the file was downloaded successfully
+      const fileInfo = await FileSystem.getInfoAsync(destinationUri);
+      if (!fileInfo.exists) {
+        throw new Error('Downloaded file does not exist');
+      }
+
+      console.log(`Audio downloaded successfully to: ${destinationUri}`);
+      return destinationUri;
+    } catch (error) {
+      console.error('Error downloading audio:', error);
+      throw error;
+    }
+  };
+
+  /**
    * Play audio from a URL
    * @param audioUrl The URL of the audio to play
    * @param isOriginal Whether this is the original audio (true) or translated audio (false)
@@ -519,21 +569,18 @@ export default function TranslateScreen() {
       }
       setProcessingError(null);
 
-      // Verify the audio URL is still accessible
-      const isAudioAccessible = await verifyAudioUrl(audioUrl);
-      if (!isAudioAccessible) {
-        throw new Error(`Audio file is not accessible: ${audioUrl}`);
-      }
+      // Download audio file to local storage before playing
+      const localUri = await downloadAudioFile(audioUrl, isOriginal);
 
       console.log(
         `Playing ${
           isOriginal ? 'original' : 'translated'
-        } audio from: ${audioUrl}`
+        } audio from: ${localUri}`
       );
 
-      // Create and play the sound
+      // Create and play the sound from local file
       const { sound: newSound } = await Audio.Sound.createAsync(
-        { uri: audioUrl },
+        { uri: localUri },
         { shouldPlay: true } // Start playing immediately
       );
 

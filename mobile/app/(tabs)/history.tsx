@@ -11,10 +11,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { useFocusEffect } from 'expo-router';
-import * as FileSystem from 'expo-file-system'; // Import FileSystem for file operations
+import * as FileSystem from 'expo-file-system/legacy'; // Import FileSystem for file operations
 
 // Key for storing translation history in AsyncStorage
 const HISTORY_STORAGE_KEY = '@translation_history';
+// Directory for storing audio files
+const AUDIO_DIRECTORY = `${FileSystem.documentDirectory}audio/`;
 
 // Type definition for history items
 export interface HistoryItem {
@@ -122,31 +124,68 @@ export default function HistoryScreen() {
     );
   };
 
-  // Verify that an audio URL is accessible
-  const verifyAudioUrl = async (url: string) => {
+  // Ensure the audio directory exists
+  const ensureAudioDirectoryExists = async () => {
     try {
-      // For local file URLs, check if the file exists
-      if (url.startsWith('file://')) {
-        const fileInfo = await FileSystem.getInfoAsync(url);
-        return fileInfo.exists;
+      const dirInfo = await FileSystem.getInfoAsync(AUDIO_DIRECTORY);
+      if (!dirInfo.exists) {
+        await FileSystem.makeDirectoryAsync(AUDIO_DIRECTORY, {
+          intermediates: true,
+        });
+        console.log('Created audio directory');
       }
-
-      // For remote URLs, make a minimal request to check if the URL is valid
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          Range: 'bytes=0-0', // Only request the first byte to minimize data transfer
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Audio file not found: ${url}`);
-      }
-
-      return true;
     } catch (error) {
-      console.error('Audio URL verification failed:', error);
-      return false;
+      console.error('Error creating audio directory:', error);
+    }
+  };
+
+  /**
+   * Download audio file to local storage
+   * @param audioUrl The URL of the audio to download
+   * @param isOriginal Whether this is the original audio (for filename)
+   * @returns The local file URI
+   */
+  const downloadAudioFile = async (audioUrl: string, isOriginal: boolean): Promise<string> => {
+    try {
+      // If it's already a local file, return it as-is
+      if (audioUrl.startsWith('file://')) {
+        return audioUrl;
+      }
+
+      await ensureAudioDirectoryExists();
+
+      // Extract file extension from URL
+      let fileExtension = 'm4a'; // Default extension
+      const urlPath = audioUrl.split('?')[0]; // Remove query parameters
+      const urlExtension = urlPath.split('.').pop()?.toLowerCase();
+
+      // Use the extension from URL if it's a valid audio format
+      if (urlExtension && ['mp3', 'm4a', 'wav', 'aac', 'ogg'].includes(urlExtension)) {
+        fileExtension = urlExtension;
+      }
+
+      const fileName = `${isOriginal ? 'original' : 'translated'}-${Date.now()}.${fileExtension}`;
+      const destinationUri = `${AUDIO_DIRECTORY}${fileName}`;
+
+      console.log(`Downloading audio from ${audioUrl} to ${destinationUri}`);
+
+      const downloadResult = await FileSystem.downloadAsync(audioUrl, destinationUri);
+
+      if (downloadResult.status !== 200) {
+        throw new Error(`Failed to download audio: ${downloadResult.status}`);
+      }
+
+      // Verify the file was downloaded successfully
+      const fileInfo = await FileSystem.getInfoAsync(destinationUri);
+      if (!fileInfo.exists) {
+        throw new Error('Downloaded file does not exist');
+      }
+
+      console.log(`Audio downloaded successfully to: ${destinationUri}`);
+      return destinationUri;
+    } catch (error) {
+      console.error('Error downloading audio:', error);
+      throw error;
     }
   };
 
@@ -170,21 +209,18 @@ export default function HistoryScreen() {
         ? item.originalAudioUrl
         : item.translatedAudioUrl;
 
-      // Verify the audio URL is accessible
-      const isAudioAccessible = await verifyAudioUrl(audioUrl);
-      if (!isAudioAccessible) {
-        throw new Error(`Audio file not accessible: ${audioUrl}`);
-      }
+      // Download audio file to local storage before playing
+      const localUri = await downloadAudioFile(audioUrl, isOriginal);
 
-      console.log(`Playing audio from: ${audioUrl}`);
+      console.log(`Playing audio from: ${localUri}`);
 
       // Set the playing state
       setPlayingItemId(item.id);
       setIsPlayingOriginal(isOriginal);
 
-      // Create and play the sound
+      // Create and play the sound from local file
       const { sound: newSound } = await Audio.Sound.createAsync(
-        { uri: audioUrl },
+        { uri: localUri },
         { shouldPlay: true }
       );
 
