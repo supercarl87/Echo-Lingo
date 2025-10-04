@@ -22,13 +22,14 @@ class SambaNovaTranslationProvider(BaseTranslationProvider):
             base_url=self.settings.SAMBANOVA_BASE_URL,
         )
 
-    async def translate_text(self, text: str, target_language: str) -> str:
+    async def translate_text(self, text: str, target_language: str, guideline: str = "") -> str:
         """
         Translate text using SambaNova's language model.
 
         Args:
             text: Text to translate
             target_language: Target language for translation
+            guideline: Additional translation guidelines (optional)
 
         Returns:
             Translated text
@@ -37,12 +38,14 @@ class SambaNovaTranslationProvider(BaseTranslationProvider):
             Exception: If translation fails
         """
         logger.info(
-            f"Translating text with SambaNova, text length: {len(text)}, target: {target_language}"
+            f"Translating text with SambaNova, text length: {len(text)}, target: {target_language}, "
+            f"guideline: {'provided' if guideline else 'none'}"
         )
 
         # Create system prompt for translation
+        guideline_text = f" {guideline}" if guideline else ""
         system_prompt = f"""You are a translation assistant.
-        Translate the following text into {target_language}. make it sounds like crazy , but carry the same meeting
+        Translate the following text into {target_language}. make it sounds like crazy , but carry the same meeting{guideline_text}
         Provide only the translated text without any explanations or additional content."""
 
         try:

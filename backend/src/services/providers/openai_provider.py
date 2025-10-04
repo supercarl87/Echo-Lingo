@@ -18,13 +18,14 @@ class OpenAITranslationProvider(BaseTranslationProvider):
         self.settings = get_settings()
         self.client = openai.OpenAI(api_key=self.settings.OPENAI_API_KEY)
 
-    async def translate_text(self, text: str, target_language: str) -> str:
+    async def translate_text(self, text: str, target_language: str, guideline: str = "") -> str:
         """
         Translate text using OpenAI's GPT model.
 
         Args:
             text: Text to translate
             target_language: Target language for translation
+            guideline: Additional translation guidelines (optional)
 
         Returns:
             Translated text
@@ -33,13 +34,17 @@ class OpenAITranslationProvider(BaseTranslationProvider):
             Exception: If translation fails
         """
         logger.info(
-            f"Translating text with OpenAI, text length: {len(text)}, target: {target_language}"
+            f"Translating text with OpenAI, text length: {len(text)}, target: {target_language}, "
+            f"guideline: {'provided' if guideline else 'none'}"
         )
 
         # Create system prompt for translation
+        guideline_text = f" {guideline}" if guideline else ""
         system_prompt = f"""You are a translation assistant.
-        Translate the following text into {target_language}.
+        Translate the following text into {target_language}. {guideline_text}
         Provide only the translated text without any explanations or additional content."""
+
+        print(system_prompt)
 
         try:
             response = self.client.chat.completions.create(

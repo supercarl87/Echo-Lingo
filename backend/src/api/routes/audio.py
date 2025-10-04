@@ -51,6 +51,7 @@ async def process_audio(
     ),
     voice_provider: str = Query("elevenlabs", description="Voice provider to use for TTS"),
     voice_id: Optional[str] = Query(None, description="Voice ID to use for TTS (uses default if not specified)"),
+    guideline: str = Query("", description="Additional translation guidelines (optional)"),
 ):
     """
     Process an audio file: transcribe, translate, and generate speech.
@@ -63,6 +64,7 @@ async def process_audio(
         should_generate_audio: Whether to generate audio from translated text
         voice_provider: Voice provider to use for TTS (elevenlabs, hume)
         voice_id: Voice ID to use for TTS (uses default if not specified)
+        guideline: Additional translation guidelines (optional)
 
     Returns:
         AudioResponse: Object containing transcribed text, translated text, and audio URL
@@ -71,7 +73,8 @@ async def process_audio(
     logger.info(
         f"Processing audio file: {file.filename}, target language: {target_language}, "
         f"translate: {should_translate}, generate audio: {should_generate_audio}, "
-        f"voice provider: {voice_provider}, voice ID: {voice_id or 'default'}"
+        f"voice provider: {voice_provider}, voice ID: {voice_id or 'default'}, "
+        f"guideline: {'provided' if guideline else 'none'}"
     )
 
     # Log request content type and headers for debugging
@@ -128,7 +131,7 @@ async def process_audio(
                 step_start_time = time.time()
                 logger.info(f"Translating text to {target_language}")
                 translated_text = await translation.translate_text(
-                    transcribed_text, target_language
+                    transcribed_text, target_language, guideline
                 )
                 step_time = time.time() - step_start_time
                 logger.info(f"Translation completed in {step_time:.2f}s")

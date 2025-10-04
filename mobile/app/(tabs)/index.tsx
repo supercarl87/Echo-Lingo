@@ -11,6 +11,7 @@ import {
   Pressable,
   Platform,
   Alert,
+  TextInput,
 } from 'react-native';
 import { Audio } from 'expo-av'; // Audio recording and playback library
 import { Ionicons } from '@expo/vector-icons'; // Icons for UI elements
@@ -28,6 +29,7 @@ const API_URL = 'https://fond-workable-firefly.ngrok-free.app';
 const HISTORY_STORAGE_KEY = '@translation_history';
 const SELECTED_LANGUAGE_KEY = '@selected_language';
 const VOICE_PROVIDER_SETTINGS_KEY = '@voice_provider_settings';
+const GUIDELINE_KEY = '@translation_guideline';
 // Directory for storing audio files
 const AUDIO_DIRECTORY = `${FileSystem.documentDirectory}audio/`;
 
@@ -57,6 +59,7 @@ export default function TranslateScreen() {
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [isPlayingOriginal, setIsPlayingOriginal] = useState(false);
   const [processingError, setProcessingError] = useState<string | null>(null);
+  const [guideline, setGuideline] = useState<string>(''); // Loaded from AsyncStorage
 
   // Ensure audio directory exists when component mounts
   useEffect(() => {
@@ -67,6 +70,7 @@ export default function TranslateScreen() {
   useEffect(() => {
     loadSelectedLanguage();
     loadVoiceProviderSettings();
+    loadGuideline();
   }, []);
 
   // Reload settings whenever the screen comes into focus
@@ -74,6 +78,7 @@ export default function TranslateScreen() {
     useCallback(() => {
       loadSelectedLanguage();
       loadVoiceProviderSettings();
+      loadGuideline();
       return () => {
         // This runs when the screen goes out of focus
       };
@@ -128,6 +133,18 @@ export default function TranslateScreen() {
       }
     } catch (error) {
       console.error('Error loading voice provider settings:', error);
+    }
+  };
+
+  // Load the guideline from AsyncStorage
+  const loadGuideline = async () => {
+    try {
+      const savedGuideline = await AsyncStorage.getItem(GUIDELINE_KEY);
+      if (savedGuideline) {
+        setGuideline(savedGuideline);
+      }
+    } catch (error) {
+      console.error('Error loading guideline:', error);
     }
   };
 
@@ -382,6 +399,7 @@ export default function TranslateScreen() {
           target_language: selectedLanguage.name, // Target language for translation
           voice_provider: voiceProviderSettings.provider, // Voice provider (elevenlabs or hume)
           voice_id: currentVoiceId, // Voice ID for the selected provider
+          guideline: guideline || undefined, // Translation guideline (optional)
         },
         headers: {
           'Content-Type': 'multipart/form-data',

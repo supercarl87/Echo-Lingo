@@ -9,13 +9,14 @@ from src.services.providers.factory import get_translation_provider
 logger = get_logger(__name__)
 
 
-async def translate_text(text: str, target_language: str) -> str:
+async def translate_text(text: str, target_language: str, guideline: str = "") -> str:
     """
     Translate text to the target language using the configured provider.
 
     Args:
         text: Text to translate
         target_language: Target language for translation
+        guideline: Additional translation guidelines (optional)
 
     Returns:
         Translated text
@@ -28,7 +29,7 @@ async def translate_text(text: str, target_language: str) -> str:
         logger.debug(f"Using translation provider: {provider.get_provider_name()}")
 
         # Perform translation using the provider
-        translated_text = await provider.translate_text(text, target_language)
+        translated_text = await provider.translate_text(text, target_language, guideline)
 
         logger.info(f"Translation successful, translated text length: {len(translated_text)}")
         logger.debug(f"Translated text: {translated_text[:100]}...")

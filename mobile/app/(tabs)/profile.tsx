@@ -10,6 +10,7 @@ import {
   Pressable,
   ScrollView,
   Alert,
+  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -20,6 +21,7 @@ import VoiceProviderSelector, { VoiceProviderSettings } from '../components/Voic
 // Keys for storing settings in AsyncStorage
 const SELECTED_LANGUAGE_KEY = '@selected_language';
 const VOICE_PROVIDER_SETTINGS_KEY = '@voice_provider_settings';
+const GUIDELINE_KEY = '@translation_guideline';
 
 export default function ProfileScreen() {
   const [showLanguageSelector, setShowLanguageSelector] = useState(false);
@@ -32,12 +34,14 @@ export default function ProfileScreen() {
     elevenLabsVoiceId: 'o47F6fLSHEFdPzySrC5z', // Default from backend
     humeVoiceId: '30edfa2e-7d75-45fb-8ccf-e280941393ee', // Default from backend
   });
+  const [guideline, setGuideline] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
 
   // Load the saved preferences when component mounts
   useEffect(() => {
     loadSelectedLanguage();
     loadVoiceProviderSettings();
+    loadGuideline();
   }, []);
 
   // Load the selected language from AsyncStorage
@@ -73,6 +77,18 @@ export default function ProfileScreen() {
       }
     } catch (error) {
       console.error('Error loading voice provider settings:', error);
+    }
+  };
+
+  // Load the guideline from AsyncStorage
+  const loadGuideline = async () => {
+    try {
+      const savedGuideline = await AsyncStorage.getItem(GUIDELINE_KEY);
+      if (savedGuideline) {
+        setGuideline(savedGuideline);
+      }
+    } catch (error) {
+      console.error('Error loading guideline:', error);
     }
   };
 
@@ -146,6 +162,29 @@ export default function ProfileScreen() {
     saveVoiceProviderSettings(settings);
   };
 
+  // Save the guideline to AsyncStorage
+  const saveGuideline = async () => {
+    try {
+      setIsSaving(true);
+      await AsyncStorage.setItem(GUIDELINE_KEY, guideline);
+      Alert.alert(
+        'Guideline Saved',
+        'Translation guideline has been updated',
+        [{ text: 'OK' }],
+        { cancelable: true }
+      );
+    } catch (error) {
+      console.error('Error saving guideline:', error);
+      Alert.alert(
+        'Error',
+        'Failed to save guideline. Please try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
@@ -204,6 +243,34 @@ export default function ProfileScreen() {
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={24} color="#888" />
+        </Pressable>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Translation Guideline</Text>
+        <Text style={styles.sectionDescription}>
+          Set custom guidelines for translation (optional)
+        </Text>
+
+        <TextInput
+          style={styles.guidelineInput}
+          placeholder="Enter translation guidelines..."
+          placeholderTextColor="#666"
+          value={guideline}
+          onChangeText={setGuideline}
+          multiline
+          numberOfLines={4}
+          textAlignVertical="top"
+        />
+
+        <Pressable
+          style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+          onPress={saveGuideline}
+          disabled={isSaving}
+        >
+          <Text style={styles.saveButtonText}>
+            {isSaving ? 'Saving...' : 'Save Guideline'}
+          </Text>
         </Pressable>
       </View>
 
@@ -299,5 +366,29 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
     lineHeight: 20,
+  },
+  guidelineInput: {
+    backgroundColor: '#1a1a1a',
+    color: '#fff',
+    fontSize: 14,
+    padding: 15,
+    borderRadius: 10,
+    minHeight: 100,
+    maxHeight: 150,
+    marginBottom: 15,
+  },
+  saveButton: {
+    backgroundColor: '#4CAF50',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#2a5a2c',
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
