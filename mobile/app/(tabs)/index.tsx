@@ -12,6 +12,7 @@ import {
   Platform,
   Alert,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { Audio } from 'expo-av'; // Audio recording and playback library
 import { Ionicons } from '@expo/vector-icons'; // Icons for UI elements
@@ -291,6 +292,27 @@ export default function TranslateScreen() {
   };
 
   /**
+   * Check audio duration
+   * @param uri The URI of the audio file
+   * @returns Duration in milliseconds
+   */
+  const getAudioDuration = async (uri: string): Promise<number> => {
+    try {
+      const { sound } = await Audio.Sound.createAsync({ uri });
+      const status = await sound.getStatusAsync();
+      await sound.unloadAsync();
+
+      if (status.isLoaded) {
+        return status.durationMillis || 0;
+      }
+      return 0;
+    } catch (error) {
+      console.error('Error getting audio duration:', error);
+      return 0;
+    }
+  };
+
+  /**
    * Stop recording and process the recorded audio
    */
   const stopRecording = async () => {
@@ -319,6 +341,17 @@ export default function TranslateScreen() {
       // Process the recorded audio if we have a valid URI
       if (uri) {
         try {
+          // Check audio duration before processing
+          const duration = await getAudioDuration(uri);
+          const durationSeconds = duration / 1000;
+
+          console.log(`Audio duration: ${durationSeconds.toFixed(2)} seconds`);
+
+          if (durationSeconds < 1.5) {
+            setProcessingError('Recording too short. Please record at least 1.5 seconds of audio.');
+            return;
+          }
+
           // Copy the recording to a permanent location
           const permanentUri = await copyFileToAudioDirectory(uri);
           setOriginalAudio(permanentUri);
@@ -730,24 +763,29 @@ export default function TranslateScreen() {
       <View style={styles.controls}>
         {/* Record button - press and hold to record */}
         <Pressable
-          style={[styles.recordButton, isRecording && styles.recording]}
+          style={[
+            styles.recordButton,
+            isRecording && styles.recording,
+            isLoading && styles.recordButtonDisabled,
+          ]}
           onPressIn={startRecording}
           onPressOut={stopRecording}
+          disabled={isLoading}
         >
-          <Ionicons
-            name={isRecording ? 'radio-button-on' : 'mic'}
-            size={32}
-            color="#fff"
-          />
+          {isLoading ? (
+            <ActivityIndicator size="large" color="#fff" />
+          ) : (
+            <Ionicons
+              name={isRecording ? 'radio-button-on' : 'mic'}
+              size={32}
+              color="#fff"
+            />
+          )}
         </Pressable>
+        {isLoading && (
+          <Text style={styles.processingText}>Processing...</Text>
+        )}
       </View>
-
-      {/* Loading overlay */}
-      {isLoading && (
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Processing audio...</Text>
-        </View>
-      )}
     </View>
   );
 }
@@ -834,6 +872,15 @@ const styles = StyleSheet.create({
   recording: {
     backgroundColor: '#ff0000',
     transform: [{ scale: 1.1 }], // Enlarge button when recording
+  },
+  recordButtonDisabled: {
+    backgroundColor: '#666',
+    opacity: 0.7,
+  },
+  processingText: {
+    color: '#fff',
+    fontSize: 14,
+    marginTop: 10,
   },
   playButton: {
     width: 50,
