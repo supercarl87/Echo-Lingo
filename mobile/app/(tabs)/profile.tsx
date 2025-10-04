@@ -23,6 +23,66 @@ const SELECTED_LANGUAGE_KEY = '@selected_language';
 const VOICE_PROVIDER_SETTINGS_KEY = '@voice_provider_settings';
 const GUIDELINE_KEY = '@translation_guideline';
 
+// Preset guideline interface
+interface GuidelinePreset {
+  id: string;
+  name: string;
+  icon: string;
+  text: string;
+}
+
+// Preset guidelines for common travel scenarios
+const GUIDELINE_PRESETS: GuidelinePreset[] = [
+  {
+    id: 'emergency',
+    name: 'Emergency',
+    icon: '🚨',
+    text: 'Translate urgently and clearly. Use simple, direct language. Include important medical or safety terms.',
+  },
+  {
+    id: 'dating',
+    name: 'Dating',
+    icon: '💋',
+    text: 'Make it flirty and charming. Add playful undertones and romantic flair. Keep it spicy but respectful.',
+  },
+  {
+    id: 'restaurant',
+    name: 'Restaurant',
+    icon: '🍽️',
+    text: 'Use polite dining language. Help with ordering food, asking about ingredients, and expressing dietary preferences.',
+  },
+  {
+    id: 'shopping',
+    name: 'Shopping',
+    icon: '🛍️',
+    text: 'Translate for bargaining and price discussions. Help with asking about sizes, colors, and making purchases.',
+  },
+  {
+    id: 'directions',
+    name: 'Directions',
+    icon: '🗺️',
+    text: 'Focus on location-related terms. Help with asking for directions, understanding street names, and transportation.',
+  },
+  {
+    id: 'hotel',
+    name: 'Hotel',
+    icon: '🏨',
+    text: 'Use professional hospitality language. Help with check-in, room requests, and hotel service inquiries.',
+  },
+  {
+    id: 'casual',
+    name: 'Casual Chat',
+    icon: '💬',
+    text: 'Keep it friendly and conversational. Use casual, everyday language for meeting new people.',
+  },
+  {
+    id: 'business',
+    name: 'Business',
+    icon: '💼',
+    text: 'Use formal, professional language. Maintain business etiquette and clear communication.',
+  },
+];
+
 export default function ProfileScreen() {
   const [showLanguageSelector, setShowLanguageSelector] = useState(false);
   const [showVoiceProviderSelector, setShowVoiceProviderSelector] = useState(false);
@@ -35,6 +95,7 @@ export default function ProfileScreen() {
     humeVoiceId: '30edfa2e-7d75-45fb-8ccf-e280941393ee', // Default from backend
   });
   const [guideline, setGuideline] = useState<string>('');
+  const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   // Load the saved preferences when component mounts
@@ -162,6 +223,17 @@ export default function ProfileScreen() {
     saveVoiceProviderSettings(settings);
   };
 
+  // Handle preset selection
+  const handlePresetSelect = (preset: GuidelinePreset) => {
+    setSelectedPreset(preset.id);
+    setGuideline(preset.text);
+  };
+
+  // Clear preset selection (for custom guideline)
+  const clearPresetSelection = () => {
+    setSelectedPreset(null);
+  };
+
   // Save the guideline to AsyncStorage
   const saveGuideline = async () => {
     try {
@@ -249,19 +321,65 @@ export default function ProfileScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Translation Guideline</Text>
         <Text style={styles.sectionDescription}>
-          Set custom guidelines for translation (optional)
+          Choose a preset or create your own custom guideline
         </Text>
 
-        <TextInput
-          style={styles.guidelineInput}
-          placeholder="Enter translation guidelines..."
-          placeholderTextColor="#666"
-          value={guideline}
-          onChangeText={setGuideline}
-          multiline
-          numberOfLines={4}
-          textAlignVertical="top"
-        />
+        {/* Preset buttons grid */}
+        <View style={styles.presetGrid}>
+          {GUIDELINE_PRESETS.map((preset) => (
+            <Pressable
+              key={preset.id}
+              style={[
+                styles.presetButton,
+                selectedPreset === preset.id && styles.presetButtonSelected,
+              ]}
+              onPress={() => handlePresetSelect(preset)}
+            >
+              <Text style={styles.presetIcon}>{preset.icon}</Text>
+              <Text
+                style={[
+                  styles.presetName,
+                  selectedPreset === preset.id && styles.presetNameSelected,
+                ]}
+              >
+                {preset.name}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* Guideline text input */}
+        <View style={styles.guidelineTextContainer}>
+          <View style={styles.guidelineHeader}>
+            <Text style={styles.guidelineLabel}>
+              {selectedPreset ? 'Edit Preset Guideline' : 'Custom Guideline'}
+            </Text>
+            {selectedPreset && (
+              <Pressable onPress={clearPresetSelection}>
+                <Text style={styles.clearPresetText}>Clear Preset</Text>
+              </Pressable>
+            )}
+          </View>
+          <TextInput
+            style={styles.guidelineInput}
+            placeholder="Enter translation guidelines..."
+            placeholderTextColor="#666"
+            value={guideline}
+            onChangeText={(text) => {
+              setGuideline(text);
+              // If user edits, clear preset selection
+              if (selectedPreset) {
+                const preset = GUIDELINE_PRESETS.find((p) => p.id === selectedPreset);
+                if (preset && text !== preset.text) {
+                  clearPresetSelection();
+                }
+              }
+            }}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+        </View>
 
         <Pressable
           style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
@@ -367,6 +485,56 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  presetGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 20,
+  },
+  presetButton: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 10,
+    padding: 12,
+    width: '48%',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  presetButtonSelected: {
+    borderColor: '#4CAF50',
+    backgroundColor: '#1a3a1c',
+  },
+  presetIcon: {
+    fontSize: 32,
+    marginBottom: 5,
+  },
+  presetName: {
+    color: '#888',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  presetNameSelected: {
+    color: '#4CAF50',
+    fontWeight: 'bold',
+  },
+  guidelineTextContainer: {
+    marginBottom: 15,
+  },
+  guidelineHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  guidelineLabel: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  clearPresetText: {
+    color: '#ff4444',
+    fontSize: 12,
+  },
   guidelineInput: {
     backgroundColor: '#1a1a1a',
     color: '#fff',
@@ -375,7 +543,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     minHeight: 100,
     maxHeight: 150,
-    marginBottom: 15,
   },
   saveButton: {
     backgroundColor: '#4CAF50',
