@@ -95,74 +95,96 @@ export default function TranslateScreen() {
   // Animate a subtle pulse around the record button while recording
   useEffect(() => {
     if (isRecording) {
-      {/* Control buttons */}
-      <View style={styles.controls}>
-        {/* Record button - press and hold to record */}
-        <View style={styles.recordButtonWrapper}>
-          <Animated.View
-            pointerEvents="none"
-            style=[
-              styles.recordPulse,
-              {
-                opacity: pulseOpacity,
-                transform: [{ scale: pulseScale }],
-              },
-            ]
-          />
-          <Pressable
-            style={({ pressed }) => [
-              styles.recordButtonPressable,
-              styles.controlShadow,
-              pressed && !isLoading && styles.recordButtonPressed,
-            ]}
-            onPressIn={startRecording}
-            onPressOut={stopRecording}
-            disabled={isLoading}
-          >
-            <LinearGradient
-              colors=
-                isLoading
-                  ? ['#6c6c76', '#4c4c54']
-                  : isRecording
-                    ? ['#ff5658', '#ff1f46']
-                    : ['#ff6f61', '#ff2d55']
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style=[
-                styles.recordButton,
-                isRecording && styles.recording,
-                isLoading && styles.recordButtonDisabled,
-              ]
-            >
-              <View style={styles.recordButtonInner}>
-                {isLoading ? (
-                  <ActivityIndicator size="large" color="#fff" />
-                ) : (
-                  <Ionicons
-                    name={isRecording ? 'radio-button-on' : 'mic'}
-                    size={32}
-                    color="#fff"
-                  />
-                )}
-              </View>
-            </LinearGradient>
-          </Pressable>
-        </View>
-        {isLoading && (
-          <Text style={styles.processingText}>Processing...</Text>
-        )}
-      </View>
+      pulseOpacity.setValue(0.5);
+      pulseAnimation.current?.stop();
+      pulseAnimation.current = Animated.loop(
+        Animated.sequence([
+          Animated.parallel([
+            Animated.timing(pulseScale, {
+              toValue: 1.35,
+              duration: 700,
+              useNativeDriver: true,
+            }),
+            Animated.timing(pulseOpacity, {
+              toValue: 0,
+              duration: 700,
+              useNativeDriver: true,
+            }),
+          ]),
+          Animated.parallel([
+            Animated.timing(pulseScale, {
+              toValue: 1,
+              duration: 700,
+              useNativeDriver: true,
+            }),
+            Animated.timing(pulseOpacity, {
+              toValue: 0.5,
+              duration: 700,
+              useNativeDriver: true,
+            }),
+          ]),
+        ])
+      );
+      pulseAnimation.current.start();
+    } else {
+      pulseAnimation.current?.stop();
+      pulseAnimation.current = null;
+      pulseScale.setValue(1);
+      pulseOpacity.setValue(0);
+    }
 
-      {/* Loading overlay */}
-      {isLoading && (
-        <View style={styles.loadingContainer}>
-          <View style={styles.loadingContent}>
-            <ActivityIndicator size="small" color="#fff" />
-            <Text style={styles.loadingText}>Processing audio...</Text>
-          </View>
-        </View>
-      )}
-    </LinearGradient>
+    return () => {
+      pulseAnimation.current?.stop();
+    };
+  }, [isRecording, pulseOpacity, pulseScale]);
+
+  // Load the guideline from AsyncStorage
+  const loadGuideline = async () => {
+    try {
+      const savedGuideline = await AsyncStorage.getItem(GUIDELINE_KEY);
+      if (savedGuideline) {
+        setGuideline(savedGuideline);
+      }
+    } catch (error) {
+      console.error('Error loading guideline:', error);
+    }
+  };
+
+  // Ensure audio directory exists
+  const ensureAudioDirectoryExists = async () => {
+    try {
+      const dirInfo = await FileSystem.getInfoAsync(AUDIO_DIRECTORY);
+      if (!dirInfo.exists) {
+        await FileSystem.makeDirectoryAsync(AUDIO_DIRECTORY, {
+          intermediates: true,
+        });
+        console.log('Created audio directory');
+      }
+    } catch (error) {
+      console.error('Error creating audio directory:', error);
+    }
+  };
+
+  // Load the selected language from AsyncStorage
+  const loadSelectedLanguage = async () => {
+    try {
+      const savedLanguage = await AsyncStorage.getItem(SELECTED_LANGUAGE_KEY);
+      if (savedLanguage) {
+        const languageData = JSON.parse(savedLanguage);
+        const foundLanguage = LANGUAGES.find(
+          (lang) => lang.code === languageData.code
+        );
+        if (foundLanguage) {
+          setSelectedLanguage(foundLanguage);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading selected language:', error);
+    }
+  };
+
+  // Load the voice provider settings from AsyncStorage
+  const loadVoiceProviderSettings = async () => {
     try {
       const savedSettings = await AsyncStorage.getItem(VOICE_PROVIDER_SETTINGS_KEY);
       if (savedSettings) {
@@ -175,18 +197,6 @@ export default function TranslateScreen() {
       }
     } catch (error) {
       console.error('Error loading voice provider settings:', error);
-    }
-  };
-
-  // Load the guideline from AsyncStorage
-  const loadGuideline = async () => {
-    try {
-      const savedGuideline = await AsyncStorage.getItem(GUIDELINE_KEY);
-      if (savedGuideline) {
-        setGuideline(savedGuideline);
-      }
-    } catch (error) {
-      console.error('Error loading guideline:', error);
     }
   };
 
@@ -840,7 +850,6 @@ export default function TranslateScreen() {
       {/* Control buttons */}
       <View style={styles.controls}>
         {/* Record button - press and hold to record */}
-<<<<<<< HEAD
         <View style={styles.recordButtonWrapper}>
           <Animated.View
             pointerEvents="none"
@@ -856,27 +865,45 @@ export default function TranslateScreen() {
             style={({ pressed }) => [
               styles.recordButtonPressable,
               styles.controlShadow,
-              pressed && styles.recordButtonPressed,
+              pressed && !isLoading && styles.recordButtonPressed,
             ]}
             onPressIn={startRecording}
             onPressOut={stopRecording}
+            disabled={isLoading}
           >
             <LinearGradient
-              colors={isRecording ? ['#ff5658', '#ff1f46'] : ['#ff6f61', '#ff2d55']}
+              colors={
+                isLoading
+                  ? ['#6c6c76', '#4c4c54']
+                  : isRecording
+                    ? ['#ff5658', '#ff1f46']
+                    : ['#ff6f61', '#ff2d55']
+              }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={[styles.recordButton, isRecording && styles.recording]}
+              style={[
+                styles.recordButton,
+                isRecording && styles.recording,
+                isLoading && styles.recordButtonDisabled,
+              ]}
             >
               <View style={styles.recordButtonInner}>
-                <Ionicons
-                  name={isRecording ? 'radio-button-on' : 'mic'}
-                  size={32}
-                  color="#fff"
-                />
+                {isLoading ? (
+                  <ActivityIndicator size="large" color="#fff" />
+                ) : (
+                  <Ionicons
+                    name={isRecording ? 'radio-button-on' : 'mic'}
+                    size={32}
+                    color="#fff"
+                  />
+                )}
               </View>
             </LinearGradient>
           </Pressable>
         </View>
+        {isLoading && (
+          <Text style={styles.processingText}>Processing...</Text>
+        )}
       </View>
 
       {/* Loading overlay */}
@@ -889,33 +916,6 @@ export default function TranslateScreen() {
         </View>
       )}
     </LinearGradient>
-=======
-        <Pressable
-          style={[
-            styles.recordButton,
-            isRecording && styles.recording,
-            isLoading && styles.recordButtonDisabled,
-          ]}
-          onPressIn={startRecording}
-          onPressOut={stopRecording}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator size="large" color="#fff" />
-          ) : (
-            <Ionicons
-              name={isRecording ? 'radio-button-on' : 'mic'}
-              size={32}
-              color="#fff"
-            />
-          )}
-        </Pressable>
-        {isLoading && (
-          <Text style={styles.processingText}>Processing...</Text>
-        )}
-      </View>
-    </View>
->>>>>>> main
   );
 }
 

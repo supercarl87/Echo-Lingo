@@ -167,7 +167,7 @@ export default function VoiceProviderSelector({
                 editable={true}
               />
               <Text style={styles.inputHint}>
-                Default: o47F6fLSHEFdPzySrC5z (if empty)
+                Default: 9mW7DR7UTehA5cbI4AYo (if empty)
               </Text>
             </View>
 
