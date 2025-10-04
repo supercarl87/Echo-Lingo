@@ -12,8 +12,10 @@ import {
   Platform,
   Alert,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { Audio } from 'expo-av'; // Audio recording and playback library
+import * as Haptics from 'expo-haptics'; // Haptics for tactile feedback
 import { Ionicons } from '@expo/vector-icons'; // Icons for UI elements
 import AsyncStorage from '@react-native-async-storage/async-storage'; // Local storage
 import axios from 'axios'; // HTTP client for API requests
@@ -242,6 +244,9 @@ export default function TranslateScreen() {
       // Initialize audio session
       await initializeAudioSession();
 
+      // Haptic feedback: medium impact when recording starts
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
       // Create a new recording with high quality preset
       const { recording: newRecording } = await Audio.Recording.createAsync(
         Audio.RecordingOptionsPresets.HIGH_QUALITY
@@ -301,6 +306,8 @@ export default function TranslateScreen() {
 
     try {
       setIsRecording(false);
+      // Haptic feedback: light impact when recording stops
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       let uri: string | null = null;
 
       try {
@@ -325,7 +332,7 @@ export default function TranslateScreen() {
           console.log('Original audio saved to:', permanentUri);
 
           // Process the audio for translation
-          await processAudio(uri, permanentUri);
+          await processAudio(uri, permanentUri, true); // pass flag to auto-play and haptic
         } catch (error) {
           console.error('Error saving original audio:', error);
           setProcessingError('Failed to save recording. Please try again.');
@@ -375,7 +382,8 @@ export default function TranslateScreen() {
    * @param uri The local URI of the recorded audio file
    * @param originalAudioUri The permanent URI of the original audio file
    */
-  const processAudio = async (uri: string, originalAudioUri: string) => {
+  // Accepts autoPlayAndHaptic flag for post-processing feedback
+  const processAudio = async (uri: string, originalAudioUri: string, autoPlayAndHaptic = false) => {
     try {
       setIsLoading(true);
       setProcessingError(null);
@@ -432,6 +440,12 @@ export default function TranslateScreen() {
       setTranscribedText(transcribed_text);
       setTranslatedText(translated_text);
       setTranslatedAudio(fullAudioUrl);
+
+      // If requested, auto-play translated audio and fire success haptic
+      if (autoPlayAndHaptic) {
+        playAudio(fullAudioUrl, false);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
 
       // Save to history
       await saveToHistory({
@@ -698,7 +712,10 @@ export default function TranslateScreen() {
       {/* Loading overlay */}
       {isLoading && (
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Processing audio...</Text>
+          <View style={styles.loadingContent}>
+            <ActivityIndicator size="small" color="#fff" />
+            <Text style={[styles.loadingText, { marginLeft: 10 }]}>Processing audio...</Text>
+          </View>
         </View>
       )}
     </View>
@@ -825,6 +842,10 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingContent: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
   loadingText: {
