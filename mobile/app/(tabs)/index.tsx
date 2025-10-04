@@ -95,85 +95,74 @@ export default function TranslateScreen() {
   // Animate a subtle pulse around the record button while recording
   useEffect(() => {
     if (isRecording) {
-      pulseOpacity.setValue(0.5);
-      pulseAnimation.current?.stop();
-      pulseAnimation.current = Animated.loop(
-        Animated.sequence([
-          Animated.parallel([
-            Animated.timing(pulseScale, {
-              toValue: 1.35,
-              duration: 700,
-              useNativeDriver: true,
-            }),
-            Animated.timing(pulseOpacity, {
-              toValue: 0,
-              duration: 700,
-              useNativeDriver: true,
-            }),
-          ]),
-          Animated.parallel([
-            Animated.timing(pulseScale, {
-              toValue: 1,
-              duration: 700,
-              useNativeDriver: true,
-            }),
-            Animated.timing(pulseOpacity, {
-              toValue: 0.5,
-              duration: 700,
-              useNativeDriver: true,
-            }),
-          ]),
-        ])
-      );
-      pulseAnimation.current.start();
-    } else {
-      pulseAnimation.current?.stop();
-      pulseAnimation.current = null;
-      pulseScale.setValue(1);
-      pulseOpacity.setValue(0);
-    }
+      {/* Control buttons */}
+      <View style={styles.controls}>
+        {/* Record button - press and hold to record */}
+        <View style={styles.recordButtonWrapper}>
+          <Animated.View
+            pointerEvents="none"
+            style=[
+              styles.recordPulse,
+              {
+                opacity: pulseOpacity,
+                transform: [{ scale: pulseScale }],
+              },
+            ]
+          />
+          <Pressable
+            style={({ pressed }) => [
+              styles.recordButtonPressable,
+              styles.controlShadow,
+              pressed && !isLoading && styles.recordButtonPressed,
+            ]}
+            onPressIn={startRecording}
+            onPressOut={stopRecording}
+            disabled={isLoading}
+          >
+            <LinearGradient
+              colors=
+                isLoading
+                  ? ['#6c6c76', '#4c4c54']
+                  : isRecording
+                    ? ['#ff5658', '#ff1f46']
+                    : ['#ff6f61', '#ff2d55']
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style=[
+                styles.recordButton,
+                isRecording && styles.recording,
+                isLoading && styles.recordButtonDisabled,
+              ]
+            >
+              <View style={styles.recordButtonInner}>
+                {isLoading ? (
+                  <ActivityIndicator size="large" color="#fff" />
+                ) : (
+                  <Ionicons
+                    name={isRecording ? 'radio-button-on' : 'mic'}
+                    size={32}
+                    color="#fff"
+                  />
+                )}
+              </View>
+            </LinearGradient>
+          </Pressable>
+        </View>
+        {isLoading && (
+          <Text style={styles.processingText}>Processing...</Text>
+        )}
+      </View>
 
-    return () => {
-      pulseAnimation.current?.stop();
-    };
-  }, [isRecording, pulseOpacity, pulseScale]);
-
-  // Ensure the audio directory exists
-  const ensureAudioDirectoryExists = async () => {
-    try {
-      const dirInfo = await FileSystem.getInfoAsync(AUDIO_DIRECTORY);
-      if (!dirInfo.exists) {
-        await FileSystem.makeDirectoryAsync(AUDIO_DIRECTORY, {
-          intermediates: true,
-        });
-        console.log('Created audio directory');
-      }
-    } catch (error) {
-      console.error('Error creating audio directory:', error);
-    }
-  };
-
-  // Load the selected language from AsyncStorage
-  const loadSelectedLanguage = async () => {
-    try {
-      const savedLanguage = await AsyncStorage.getItem(SELECTED_LANGUAGE_KEY);
-      if (savedLanguage) {
-        const parsedLanguage = JSON.parse(savedLanguage);
-        // Find the language in our LANGUAGES array to ensure it's valid
-        const foundLanguage = LANGUAGES.find(
-          (lang) => lang.code === parsedLanguage.code
-        );
-        if (foundLanguage) {
-          setSelectedLanguage(foundLanguage);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading selected language:', error);
-    }
-  };
-
-  // Load the voice provider settings from AsyncStorage
-  const loadVoiceProviderSettings = async () => {
+      {/* Loading overlay */}
+      {isLoading && (
+        <View style={styles.loadingContainer}>
+          <View style={styles.loadingContent}>
+            <ActivityIndicator size="small" color="#fff" />
+            <Text style={styles.loadingText}>Processing audio...</Text>
+          </View>
+        </View>
+      )}
+    </LinearGradient>
     try {
       const savedSettings = await AsyncStorage.getItem(VOICE_PROVIDER_SETTINGS_KEY);
       if (savedSettings) {
