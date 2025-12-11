@@ -1,6 +1,32 @@
 # EchoLingo
 
+![Python](https://img.shields.io/badge/Python-3.12+-blue?logo=python&logoColor=white)
+![Expo SDK](https://img.shields.io/badge/Expo_SDK-54-000020?logo=expo&logoColor=white)
+![React Native](https://img.shields.io/badge/React_Native-0.81-61DAFB?logo=react&logoColor=black)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green)
+
 EchoLingo is a real-time voice translation application that allows you to speak in one language and have your speech translated and spoken back in another language.
+
+## Demo
+
+<p align="center">
+  <img src="demo/language_selection.png" width="200" alt="Language Selection" />
+  <img src="demo/speak_your_own_voice.png" width="200" alt="Speaking Interface" />
+  <img src="demo/profile.png" width="200" alt="Profile Setup" />
+</p>
+
+### Voice Cloning Setup
+
+Set up your custom voice for personalized translations:
+
+<p align="center">
+  <img src="demo/set_your_voice.png" width="200" alt="Set Your Voice" />
+  <img src="demo/get_your_voice_id.png" width="200" alt="Get Voice ID" />
+  <img src="demo/clone_your_voice_with_hume.png" width="200" alt="Clone with Hume AI" />
+</p>
+
+> **Note:** Video demos are available in the `demo/` folder (`demo.mov`, `demo_full1.MOV`) for a complete walkthrough of the app.
 
 ## 🚀 Quick Start
 
@@ -69,18 +95,7 @@ EchoLingo is a real-time voice translation application that allows you to speak 
 
 ## 🎯 Starting the Application
 
-### Option 1: Start Everything at Once (Recommended)
-```bash
-# From project root
-./start-all.sh
-```
-This will:
-- Start the backend server on port 50000
-- Set up ngrok tunnel for public access
-- Start the Expo development server
-- Open two terminal windows for monitoring
-
-### Option 2: Start Services Individually
+### Start Services Individually
 
 #### Backend Server Setup
 ```bash
@@ -149,9 +164,7 @@ EchoLingo/
 │   ├── start.sh         # Mobile startup script
 │   ├── package.json     # Node dependencies
 │   └── app.json         # Expo configuration
-├── demo/                # Demo files and examples
-├── .env                 # Project-wide environment variables
-├── start-all.sh         # Combined startup script
+├── demo/                # Demo screenshots and videos
 └── CLAUDE.md            # AI assistant instructions
 ```
 
@@ -304,7 +317,6 @@ npm run lint
 - **Missing API keys:** Check `.env` file has all required keys
 - **Permission errors:** Ensure scripts are executable
   ```bash
-  chmod +x start-all.sh
   chmod +x backend/start.sh
   chmod +x mobile/start.sh
   ```
@@ -324,7 +336,7 @@ npm run lint
 - React Native
 - expo-av (audio recording/playback)
 - axios (HTTP client)
-- expo-file-system/legacy
+- expo-file-system
 
 ## 🔑 Environment Variables
 
@@ -351,13 +363,14 @@ BACKEND_PORT=50000                              # Backend server port
 
 ## 📱 Usage
 
-1. Start the application using `./start-all.sh`
-2. Open the Expo Go app on your phone
-3. Scan the QR code displayed in the terminal
-4. Select your target language
-5. Press and hold the microphone button to record
-6. Release to send for translation
-7. The translated audio will play automatically
+1. Start the backend server: `cd backend && ./start.sh`
+2. Start the mobile app: `cd mobile && ./start.sh`
+3. Open the Expo Go app on your phone
+4. Scan the QR code displayed in the terminal
+5. Select your target language
+6. Press and hold the microphone button to record
+7. Release to send for translation
+8. The translated audio will play automatically
 
 ## 🤝 Contributing
 
@@ -365,4 +378,4 @@ Feel free to submit issues and enhancement requests!
 
 ## 📄 License
 
-[Your License Here]
+This project is licensed under the MIT License.
