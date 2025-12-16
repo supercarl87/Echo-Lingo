@@ -1,0 +1,11 @@
+{
+  "id": 381,
+  "identifier": "EOH-346",
+  "status": "active",
+  "priority": 0,
+  "projectId": 53,
+  "assignedCodingAgent": "gemini_cli",
+  "createdAt": "2025-12-16T03:42:00.449261Z",
+  "updatedAt": "2025-12-16T08:57:39.977769Z",
+  "pulledAt": "2025-12-16T08:57:45.142Z"
+}
